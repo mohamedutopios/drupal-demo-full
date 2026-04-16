@@ -14,7 +14,6 @@ DB_NAME="drupal_prod"
 DB_USER="drupal"
 DB_PASS="$(openssl rand -base64 20 | tr -d '\n')"
 PHP_VERSION="8.2"
-SERVER_NAME="monsite.example.com"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Provisionnement VM Debian — Drupal 10 + Apache"
@@ -47,8 +46,20 @@ apt-get install -y -qq \
   apt-transport-https \
   openssl
 
-# ── 3. PHP 8.2 + extensions Drupal ───────────────────────────────────────
-echo "[3/9] Installation de PHP ${PHP_VERSION}..."
+# ── 3. PHP 8.2 via dépôt Sury ────────────────────────────────────────────
+echo "[3/9] Ajout du dépôt Sury et installation de PHP ${PHP_VERSION}..."
+
+# Ajout de la clé GPG et du dépôt Sury (source officielle PHP pour Debian)
+curl -sSLo /tmp/php-sury.gpg https://packages.sury.org/php/apt.gpg
+install -D -o root -g root -m 644 /tmp/php-sury.gpg /etc/apt/trusted.gpg.d/php-sury.gpg
+rm -f /tmp/php-sury.gpg
+
+echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" \
+  > /etc/apt/sources.list.d/php-sury.list
+
+apt-get update -qq
+
+# Installation d'Apache + PHP 8.2 + extensions Drupal
 apt-get install -y -qq \
   apache2 \
   libapache2-mod-php${PHP_VERSION} \
@@ -66,18 +77,17 @@ apt-get install -y -qq \
   php${PHP_VERSION}-apcu \
   php${PHP_VERSION}-bcmath
 
+# Tuning php.ini
 PHP_INI="/etc/php/${PHP_VERSION}/apache2/php.ini"
 
 if [[ -f "${PHP_INI}" ]]; then
-  sed -i 's/^memory_limit = .*/memory_limit = 256M/' "${PHP_INI}" || true
-  sed -i 's/^upload_max_filesize = .*/upload_max_filesize = 32M/' "${PHP_INI}" || true
-  sed -i 's/^post_max_size = .*/post_max_size = 32M/' "${PHP_INI}" || true
-  sed -i 's/^max_execution_time = .*/max_execution_time = 120/' "${PHP_INI}" || true
+  sed -i 's/^memory_limit = .*/memory_limit = 256M/'             "${PHP_INI}"
+  sed -i 's/^upload_max_filesize = .*/upload_max_filesize = 32M/' "${PHP_INI}"
+  sed -i 's/^post_max_size = .*/post_max_size = 32M/'             "${PHP_INI}"
+  sed -i 's/^max_execution_time = .*/max_execution_time = 120/'   "${PHP_INI}"
 
-  if grep -q '^;date.timezone =' "${PHP_INI}"; then
-    sed -i 's#^;date.timezone =.*#date.timezone = Europe/Paris#' "${PHP_INI}"
-  elif grep -q '^date.timezone =' "${PHP_INI}"; then
-    sed -i 's#^date.timezone =.*#date.timezone = Europe/Paris#' "${PHP_INI}"
+  if grep -q '^;date.timezone' "${PHP_INI}"; then
+    sed -i 's#^;date.timezone.*#date.timezone = Europe/Paris#' "${PHP_INI}"
   else
     echo 'date.timezone = Europe/Paris' >> "${PHP_INI}"
   fi
@@ -85,7 +95,7 @@ if [[ -f "${PHP_INI}" ]]; then
   if ! grep -q '^opcache.enable=1' "${PHP_INI}"; then
     cat >> "${PHP_INI}" <<'EOF'
 
-; Drupal recommended tuning
+; Drupal recommended OPcache tuning
 opcache.enable=1
 opcache.memory_consumption=128
 opcache.interned_strings_buffer=8
@@ -94,9 +104,11 @@ opcache.revalidate_freq=60
 EOF
   fi
 else
-  echo "Fichier php.ini introuvable : ${PHP_INI}"
+  echo "❌ Fichier php.ini introuvable : ${PHP_INI}"
   exit 1
 fi
+
+echo "  → PHP $(php -r 'echo PHP_VERSION;') installé"
 
 # ── 4. Apache ─────────────────────────────────────────────────────────────
 echo "[4/9] Configuration d'Apache..."
@@ -122,9 +134,8 @@ GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 SQL
 
-echo "  → DB créée : ${DB_NAME}"
+echo "  → DB créée    : ${DB_NAME}"
 echo "  → Utilisateur : ${DB_USER}"
-echo "  → Mot de passe généré : ${DB_PASS}"
 
 # ── 6. Composer ───────────────────────────────────────────────────────────
 echo "[6/9] Installation de Composer..."
@@ -134,7 +145,7 @@ if ! command -v composer >/dev/null 2>&1; then
   ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
 
   if [[ "${EXPECTED_CHECKSUM}" != "${ACTUAL_CHECKSUM}" ]]; then
-    echo "Checksum Composer invalide."
+    echo "❌ Checksum Composer invalide."
     rm -f composer-setup.php
     exit 1
   fi
@@ -143,11 +154,10 @@ if ! command -v composer >/dev/null 2>&1; then
   rm -f composer-setup.php
 fi
 
-composer --version
+echo "  → $(composer --version)"
 
 # ── 7. Répertoire de déploiement ──────────────────────────────────────────
 echo "[7/9] Création du répertoire de déploiement..."
-mkdir -p "${DEPLOY_PATH}"
 mkdir -p "${DEPLOY_PATH}/web/sites/default/files"
 mkdir -p "${DEPLOY_PATH}/private"
 mkdir -p "/var/backups/drupal"
@@ -182,9 +192,13 @@ chmod 0440 /etc/sudoers.d/drupal-deploy
 
 # ── 9. VirtualHost Apache ─────────────────────────────────────────────────
 echo "[9/9] Configuration du VirtualHost Apache..."
+
+# Récupération de l'IP publique de la VM
+SERVER_IP="$(curl -fsSL https://checkip.amazonaws.com || hostname -I | awk '{print $1}')"
+
 cat > /etc/apache2/sites-available/drupal-crud.conf <<EOF
 <VirtualHost *:80>
-    ServerName ${SERVER_NAME}
+    ServerName ${SERVER_IP}
     ServerAdmin webmaster@localhost
     DocumentRoot ${DEPLOY_PATH}/web
 
@@ -210,19 +224,16 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ✅ Provisionnement terminé !"
 echo ""
-echo "  Informations générées :"
-echo "    DB_NAME=${DB_NAME}"
-echo "    DB_USER=${DB_USER}"
-echo "    DB_PASS=${DB_PASS}"
+echo "  ⚠️  NOTER CES INFORMATIONS :"
+echo "    DB_NAME = ${DB_NAME}"
+echo "    DB_USER = ${DB_USER}"
+echo "    DB_PASS = ${DB_PASS}"
+echo "    IP VM   = ${SERVER_IP}"
 echo ""
 echo "  Prochaines étapes :"
-echo "  1. Déployer le code Drupal dans : ${DEPLOY_PATH}"
-echo "  2. Ajouter la clé SSH publique du runner GitHub dans :"
+echo "  1. Ajouter la clé SSH publique du runner GitHub dans :"
 echo "     /home/${DEPLOY_USER}/.ssh/authorized_keys"
-echo "  3. Créer/adapter le fichier :"
+echo "  2. Créer le fichier settings.php de production dans :"
 echo "     ${DEPLOY_PATH}/web/sites/default/settings.php"
-echo "  4. Pointer le DNS de ${SERVER_NAME} vers cette VM"
-echo "  5. (Optionnel) Installer le SSL :"
-echo "     apt-get install -y certbot python3-certbot-apache"
-echo "     certbot --apache -d ${SERVER_NAME}"
+echo "  3. Déployer le code et lancer l'installation Drupal"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
