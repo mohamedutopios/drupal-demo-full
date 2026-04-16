@@ -376,7 +376,7 @@ jobs:
       - name: Smoke test — Vérification HTTP
         run: |
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 30 "${{ vars.DEPLOY_BASE_URL }}")
+            --max-time 30 "${{ vars.DEPLOY_BASE_URL }}/user/login"")
           echo "→ HTTP Status : $HTTP_STATUS"
           if [[ "$HTTP_STATUS" =~ ^(200|301|302)$ ]]; then
             echo "✅ Site accessible"
@@ -384,7 +384,7 @@ jobs:
             echo "❌ Site inaccessible (HTTP $HTTP_STATUS)"
             exit 1
           fi
-
+      
       - name: Nettoyage clé SSH
         if: always()
         run: rm -f ~/.ssh/deploy_key
