@@ -13,6 +13,7 @@
         "drush/drush": "^12.0"
     },
     "require-dev": {
+        "doctrine/instantiator": "^1.5",
         "drupal/coder": "^8.3",
         "mglaman/phpstan-drupal": "^1.2",
         "phpstan/phpstan": "^1.10",
