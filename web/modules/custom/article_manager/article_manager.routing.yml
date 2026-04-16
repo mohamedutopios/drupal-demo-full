@@ -28,7 +28,7 @@ article_manager.edit:
   path: '/articles/{article_id}/edit'
   defaults:
     _form: '\Drupal\article_manager\Form\ArticleForm'
-    _title: 'Modifier l\'article'
+    _title: "Modifier l'article"
   requirements:
     _permission: 'manage articles'
     article_id: \d+
@@ -37,7 +37,7 @@ article_manager.delete:
   path: '/articles/{article_id}/delete'
   defaults:
     _form: '\Drupal\article_manager\Form\ArticleDeleteForm'
-    _title: 'Supprimer l\'article'
+    _title: "Supprimer l'article"
   requirements:
     _permission: 'manage articles'
     article_id: \d+
