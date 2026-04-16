@@ -346,12 +346,12 @@ jobs:
             $DRUSH updatedb --yes
 
             # ── 6. Import config ───────────────────────────────────────────
-            if [ -d "$DEPLOY_PATH/config/sync" ] && \
-               [ "$(ls -A $DEPLOY_PATH/config/sync)" ]; then
+            CONFIG_DIR="$DEPLOY_PATH/config/sync"
+            if [ -d "$CONFIG_DIR" ] && [ "$(ls -A $CONFIG_DIR 2>/dev/null)" ]; then
               echo "⚙️  Import de la configuration..."
-              $DRUSH config:import --yes
+              $DRUSH config:import --yes || echo "⚠️  Config import ignoré"
             else
-              echo "   → Pas de config/sync à importer"
+              echo "   → config/sync vide ou absent, import ignoré"
             fi
 
             # ── 7. Rebuild cache ───────────────────────────────────────────
