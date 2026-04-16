@@ -6,7 +6,7 @@ via **GitHub Actions**.
 
 ---
 
-## 🗂️ Structure du projet
+##  Structure du projet
 
 ```
 drupal-crud-project/

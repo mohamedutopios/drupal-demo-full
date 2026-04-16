@@ -14,7 +14,7 @@ on:
 
 env:
   PHP_VERSION: "8.2"
-  DEPLOY_PATH: "/var/www/drupal"
+  DEPLOY_PATH: "/var/www/drupal/drupal-demo-full/"
   APACHE_USER: "www-data"
 
 # ══════════════════════════════════════════════════════════════════════════════
