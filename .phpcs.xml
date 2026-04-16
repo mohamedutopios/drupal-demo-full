@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<ruleset name="Drupal CRUD Project">
+  <description>Standards Drupal Coding Standards pour le projet Article Manager.</description>
+
+  <!-- Répertoires à analyser -->
+  <file>web/modules/custom</file>
+
+  <!-- Extensions analysées -->
+  <arg name="extensions" value="php,module,inc,install,profile,theme"/>
+
+  <!-- Exclusions -->
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+  <exclude-pattern>*/node_modules/*</exclude-pattern>
+  <exclude-pattern>*/web/core/*</exclude-pattern>
+  <exclude-pattern>*/web/modules/contrib/*</exclude-pattern>
+
+  <!-- Standards -->
+  <rule ref="Drupal"/>
+  <rule ref="DrupalPractice"/>
+
+  <!-- Affichage complet du code -->
+  <arg name="colors"/>
+  <arg value="sp"/>
+</ruleset>

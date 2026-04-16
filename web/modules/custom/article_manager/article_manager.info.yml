@@ -1,0 +1,9 @@
+name: Article Manager
+description: 'Module CRUD complet pour la gestion des articles. Création, lecture, modification et suppression avec interface Drupal native.'
+type: module
+package: Custom
+core_version_requirement: ^10
+dependencies:
+  - drupal:node
+  - drupal:user
+  - drupal:system

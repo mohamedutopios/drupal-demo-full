@@ -1,0 +1,95 @@
+<?php
+
+/**
+ * @file
+ * Installation et schéma de base de données du module Article Manager.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function article_manager_schema(): array {
+  $schema['article_manager_articles'] = [
+    'description' => 'Stocke les articles du module Article Manager.',
+    'fields' => [
+      'id' => [
+        'description' => 'Identifiant unique auto-incrémenté.',
+        'type'     => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'title' => [
+        'description' => 'Titre de l\'article.',
+        'type'     => 'varchar',
+        'length'   => 255,
+        'not null' => TRUE,
+        'default'  => '',
+      ],
+      'body' => [
+        'description' => 'Corps de l\'article.',
+        'type'     => 'text',
+        'size'     => 'big',
+        'not null' => FALSE,
+      ],
+      'status' => [
+        'description' => 'Statut de publication (1=publié, 0=brouillon).',
+        'type'     => 'int',
+        'size'     => 'tiny',
+        'not null' => TRUE,
+        'default'  => 1,
+      ],
+      'category' => [
+        'description' => 'Catégorie de l\'article.',
+        'type'     => 'varchar',
+        'length'   => 100,
+        'not null' => FALSE,
+        'default'  => '',
+      ],
+      'author_uid' => [
+        'description' => 'UID de l\'auteur (référence users).',
+        'type'     => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default'  => 0,
+      ],
+      'created' => [
+        'description' => 'Timestamp de création.',
+        'type'     => 'int',
+        'not null' => TRUE,
+        'default'  => 0,
+      ],
+      'updated' => [
+        'description' => 'Timestamp de dernière modification.',
+        'type'     => 'int',
+        'not null' => TRUE,
+        'default'  => 0,
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'status'     => ['status'],
+      'author_uid' => ['author_uid'],
+      'created'    => ['created'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function article_manager_install(): void {
+  \Drupal::messenger()->addStatus(
+    t('Article Manager installé. Rendez-vous sur <a href=":url">la liste des articles</a>.', [
+      ':url' => \Drupal\Core\Url::fromRoute('article_manager.list')->toString(),
+    ])
+  );
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function article_manager_uninstall(): void {
+  \Drupal::database()->schema()->dropTable('article_manager_articles');
+}

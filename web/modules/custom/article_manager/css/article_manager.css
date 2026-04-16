@@ -1,0 +1,141 @@
+/**
+ * Article Manager — Feuille de styles principale.
+ */
+
+/* ── Boutons d'action ────────────────────────────────────────────────── */
+.article-manager-actions {
+  margin-bottom: 1.5rem;
+}
+
+.article-manager-actions .button--primary {
+  background-color: #0071b8;
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.5rem 1.2rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* ── Tableau de liste ────────────────────────────────────────────────── */
+.article-manager-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.article-manager-table th {
+  background-color: #f4f6f8;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.7rem 1rem;
+  border-bottom: 2px solid #d0d5dd;
+}
+
+.article-manager-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #e5e9ef;
+  vertical-align: middle;
+}
+
+.article-manager-table tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* ── Badges de statut ────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.status-published {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-draft {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* ── Formulaire ──────────────────────────────────────────────────────── */
+.article-manager-form {
+  max-width: 760px;
+}
+
+.article-manager-form .form-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+/* ── Vue détail ──────────────────────────────────────────────────────── */
+.article-manager-detail {
+  max-width: 860px;
+}
+
+.article-detail-header {
+  border-bottom: 2px solid #e5e9ef;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+}
+
+.article-meta-top {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.article-category {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 0.15rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.article-title {
+  font-size: 1.8rem;
+  margin: 0.5rem 0;
+}
+
+.article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  font-size: 0.88rem;
+  color: #5c6b7a;
+  margin-top: 0.5rem;
+}
+
+.article-body {
+  line-height: 1.75;
+  font-size: 1rem;
+  color: #1a1a2e;
+  margin-bottom: 2rem;
+}
+
+.article-empty {
+  color: #9ca3af;
+}
+
+.article-detail-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border-top: 1px solid #e5e9ef;
+  padding-top: 1.2rem;
+}
+
+.button--danger {
+  background-color: #dc2626 !important;
+  color: #fff !important;
+}
+
+.button--danger:hover {
+  background-color: #b91c1c !important;
+}

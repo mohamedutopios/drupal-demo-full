@@ -1,0 +1,6 @@
+article_manager.admin_menu:
+  title: 'Article Manager'
+  route_name: article_manager.list
+  parent: system.admin_content
+  weight: 10
+  description: 'Gérer les articles personnalisés'

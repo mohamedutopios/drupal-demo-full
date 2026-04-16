@@ -1,0 +1,12 @@
+local:
+  host: drupal-crud.lndo.site
+  uri: https://drupal-crud.lndo.site
+  root: /app/web
+
+production:
+  host: monsite.example.com
+  user: deploy
+  uri: http://monsite.example.com
+  root: /var/www/drupal/web
+  ssh:
+    options: '-p 22 -i ~/.ssh/deploy_key'

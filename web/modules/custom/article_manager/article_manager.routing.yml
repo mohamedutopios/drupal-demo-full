@@ -1,0 +1,43 @@
+article_manager.list:
+  path: '/articles'
+  defaults:
+    _controller: '\Drupal\article_manager\Controller\ArticleController::list'
+    _title: 'Gestion des Articles'
+  requirements:
+    _permission: 'access article manager'
+
+article_manager.create:
+  path: '/articles/new'
+  defaults:
+    _form: '\Drupal\article_manager\Form\ArticleForm'
+    _title: 'Créer un article'
+    article_id: ~
+  requirements:
+    _permission: 'manage articles'
+
+article_manager.view:
+  path: '/articles/{article_id}'
+  defaults:
+    _controller: '\Drupal\article_manager\Controller\ArticleController::view'
+    _title: 'Détail de l\'article'
+  requirements:
+    _permission: 'access article manager'
+    article_id: \d+
+
+article_manager.edit:
+  path: '/articles/{article_id}/edit'
+  defaults:
+    _form: '\Drupal\article_manager\Form\ArticleForm'
+    _title: 'Modifier l\'article'
+  requirements:
+    _permission: 'manage articles'
+    article_id: \d+
+
+article_manager.delete:
+  path: '/articles/{article_id}/delete'
+  defaults:
+    _form: '\Drupal\article_manager\Form\ArticleDeleteForm'
+    _title: 'Supprimer l\'article'
+  requirements:
+    _permission: 'manage articles'
+    article_id: \d+

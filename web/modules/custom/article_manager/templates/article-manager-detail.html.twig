@@ -1,0 +1,77 @@
+{#
+/**
+ * @file
+ * article-manager-detail.html.twig
+ *
+ * Template pour l'affichage détaillé d'un article.
+ *
+ * Variables disponibles :
+ * - article : objet de l'article (id, title, body, category, status)
+ * - author  : nom d'affichage de l'auteur
+ * - created : date de création formatée
+ * - updated : date de dernière modification formatée
+ * - back_url, edit_url, delete_url : URLs d'action
+ */
+#}
+
+<article class="article-manager-detail">
+
+  {# ── En-tête ─────────────────────────────────────────────────────────── #}
+  <header class="article-detail-header">
+    <div class="article-meta-top">
+      {% if article.category %}
+        <span class="article-category">{{ article.category|capitalize }}</span>
+      {% endif %}
+      <span class="article-status {% if article.status %}status-published{% else %}status-draft{% endif %}">
+        {% if article.status %}✅ Publié{% else %}📝 Brouillon{% endif %}
+      </span>
+    </div>
+
+    <h1 class="article-title">{{ article.title }}</h1>
+
+    <div class="article-meta">
+      <span class="article-author">
+        👤 <strong>{{ author }}</strong>
+      </span>
+      <span class="article-date">
+        📅 Créé le <time>{{ created }}</time>
+      </span>
+      {% if updated != created %}
+        <span class="article-updated">
+          ✏️ Modifié le <time>{{ updated }}</time>
+        </span>
+      {% endif %}
+    </div>
+  </header>
+
+  {# ── Corps ───────────────────────────────────────────────────────────── #}
+  <section class="article-body">
+    {% if article.body %}
+      {{ article.body|nl2br }}
+    {% else %}
+      <p class="article-empty">
+        <em>Cet article ne contient pas encore de contenu.</em>
+      </p>
+    {% endif %}
+  </section>
+
+  {# ── Actions ─────────────────────────────────────────────────────────── #}
+  <footer class="article-detail-actions">
+    <a href="{{ back_url }}" class="button">
+      ← Retour à la liste
+    </a>
+
+    {% if edit_url %}
+      <a href="{{ edit_url }}" class="button button--primary">
+        ✏️ Modifier
+      </a>
+    {% endif %}
+
+    {% if delete_url %}
+      <a href="{{ delete_url }}" class="button button--danger">
+        🗑️ Supprimer
+      </a>
+    {% endif %}
+  </footer>
+
+</article>

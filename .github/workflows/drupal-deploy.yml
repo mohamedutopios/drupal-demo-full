@@ -1,0 +1,417 @@
+name: 🚀 Drupal CI/CD — Apache / Debian
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Passer les tests (urgence uniquement)'
+        type: boolean
+        default: false
+
+env:
+  PHP_VERSION: "8.2"
+  DEPLOY_PATH: "/var/www/drupal"
+  APACHE_USER: "www-data"
+
+# ══════════════════════════════════════════════════════════════════════════════
+jobs:
+
+  # ── JOB 1 : Qualité de code ───────────────────────────────────────────────
+  code-quality:
+    name: 🔍 Qualité de code
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, curl, gd, zip, pdo, pdo_mysql
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer install (avec dev)
+        run: composer install --no-interaction --prefer-dist
+
+      - name: PHPCS — Drupal Coding Standards
+        run: |
+          ./vendor/bin/phpcs \
+            --standard=Drupal,DrupalPractice \
+            --extensions=php,module,inc,install \
+            web/modules/custom/ || true
+
+      - name: PHPStan — Analyse statique niveau 6
+        run: |
+          ./vendor/bin/phpstan analyse \
+            --configuration=phpstan.neon \
+            --memory-limit=512M || true
+
+  # ── JOB 2 : Tests PHPUnit ─────────────────────────────────────────────────
+  tests:
+    name: 🧪 Tests PHPUnit
+    runs-on: ubuntu-latest
+    needs: code-quality
+    if: ${{ !inputs.skip_tests }}
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: drupal_test
+          MYSQL_USER: drupal
+          MYSQL_PASSWORD: drupal
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, curl, gd, zip, pdo, pdo_mysql
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer install (avec dev)
+        run: composer install --no-interaction --prefer-dist
+
+      - name: PHPUnit — Tests unitaires
+        run: |
+          ./vendor/bin/phpunit \
+            --configuration=phpunit.xml.dist \
+            --testsuite=unit \
+            --coverage-text
+        env:
+          SIMPLETEST_DB: mysql://drupal:drupal@127.0.0.1/drupal_test
+
+      - name: Upload rapport de couverture
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ── JOB 3 : Audit de sécurité ─────────────────────────────────────────────
+  security-audit:
+    name: 🛡️ Audit Sécurité
+    runs-on: ubuntu-latest
+    needs: code-quality
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer install (sans dev)
+        run: composer install --no-interaction --prefer-dist --no-dev
+
+      - name: Composer Audit — CVE dépendances PHP
+        run: composer audit --format=json | tee composer-audit.json || true
+
+      - name: Drush — Vérification advisories Drupal
+        run: |
+          composer require --dev drush/drush --no-interaction
+          ./vendor/bin/drush pm:security --format=json | tee drupal-security.json || true
+
+      - name: Gitleaks — Détection de secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Semgrep — Analyse SAST PHP/OWASP
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/php
+            p/owasp-top-ten
+        continue-on-error: true
+
+      - name: Trivy — Scan vulnérabilités filesystem
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
+
+      - name: Upload rapports sécurité
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            composer-audit.json
+            drupal-security.json
+          retention-days: 30
+
+  # ── JOB 4 : Build assets ──────────────────────────────────────────────────
+  build-assets:
+    name: 🎨 Build Assets
+    runs-on: ubuntu-latest
+    needs: [tests, security-audit]
+    if: |
+      always() &&
+      (needs.tests.result == 'success' || needs.tests.result == 'skipped') &&
+      needs.security-audit.result != 'failure'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build thème custom (si package.json présent)
+        run: |
+          THEME_DIR=$(find web/themes/custom -name "package.json" -maxdepth 2 2>/dev/null | head -1 | xargs -I{} dirname {} || true)
+          if [ -n "$THEME_DIR" ]; then
+            echo "Thème trouvé : $THEME_DIR"
+            cd "$THEME_DIR" && npm ci && npm run build --if-present
+          else
+            echo "Aucun thème custom avec package.json — étape ignorée"
+          fi
+
+      - name: Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer install — production optimisée
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+      - name: Composer dump-autoload optimisé
+        run: composer dump-autoload --optimize --no-dev
+
+      - name: Créer l'artefact de déploiement
+        run: |
+          tar --exclude='.git' \
+              --exclude='web/sites/default/files' \
+              --exclude='web/sites/default/settings.local.php' \
+              --exclude='node_modules' \
+              --exclude='coverage' \
+              --exclude='*.test' \
+              -czf drupal-build.tar.gz .
+
+      - name: Upload artefact de build
+        uses: actions/upload-artifact@v4
+        with:
+          name: drupal-build
+          path: drupal-build.tar.gz
+          retention-days: 1
+
+  # ── JOB 5 : Déploiement sur VM Debian ────────────────────────────────────
+  deploy:
+    name: 🚀 Déploiement → Production
+    runs-on: ubuntu-latest
+    needs: build-assets
+    if: |
+      github.ref == 'refs/heads/main' &&
+      needs.build-assets.result == 'success'
+    environment:
+      name: production
+      url: ${{ vars.DEPLOY_BASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Télécharger l'artefact de build
+        uses: actions/download-artifact@v4
+        with:
+          name: drupal-build
+          path: ./artifact
+
+      - name: Configurer la clé SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ vars.DEPLOY_SSH_PORT || 22 }} \
+            ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Test connectivité SSH
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -p ${{ vars.DEPLOY_SSH_PORT || 22 }} \
+              -o StrictHostKeyChecking=no \
+              ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+              "echo '✅ Connexion SSH opérationnelle'"
+
+      - name: Transférer l'artefact sur le serveur
+        run: |
+          scp -i ~/.ssh/deploy_key \
+              -P ${{ vars.DEPLOY_SSH_PORT || 22 }} \
+              -o StrictHostKeyChecking=no \
+              ./artifact/drupal-build.tar.gz \
+              ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/drupal-build.tar.gz
+
+      - name: Déploiement et mise à jour Drupal
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -p ${{ vars.DEPLOY_SSH_PORT || 22 }} \
+              -o StrictHostKeyChecking=no \
+              ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'ENDSSH'
+            set -e
+
+            DEPLOY_PATH="${{ env.DEPLOY_PATH }}"
+            DRUSH="$DEPLOY_PATH/vendor/bin/drush -r $DEPLOY_PATH/web"
+            BACKUP_PATH="/var/backups/drupal/$(date +%Y%m%d_%H%M%S)"
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  🚀 Déploiement Drupal — $(date)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # ── 1. Backup base de données ──────────────────────────────────
+            echo "💾 Sauvegarde base de données..."
+            mkdir -p "$BACKUP_PATH"
+            $DRUSH sql:dump --gzip > "$BACKUP_PATH/db.sql.gz"
+            echo "   → Sauvegarde : $BACKUP_PATH/db.sql.gz"
+
+            # ── 2. Mode maintenance ON ─────────────────────────────────────
+            echo "🔧 Activation du mode maintenance..."
+            $DRUSH state:set system.maintenance_mode 1 --input-format=integer
+            $DRUSH cache:rebuild
+
+            # ── 3. Extraction de l'artefact ────────────────────────────────
+            echo "📦 Extraction de l'artefact..."
+            tar -xzf /tmp/drupal-build.tar.gz -C "$DEPLOY_PATH" \
+              --exclude='web/sites/default/settings.php' \
+              --exclude='web/sites/default/files'
+            rm -f /tmp/drupal-build.tar.gz
+
+            # ── 4. Permissions ─────────────────────────────────────────────
+            echo "🔑 Application des permissions..."
+            sudo chown -R "${{ env.APACHE_USER }}:${{ env.APACHE_USER }}" \
+              "$DEPLOY_PATH/web/sites/default/files/" 2>/dev/null || true
+            sudo chmod -R 775 \
+              "$DEPLOY_PATH/web/sites/default/files/" 2>/dev/null || true
+
+            # ── 5. Mise à jour BDD ─────────────────────────────────────────
+            echo "🗄️  Mise à jour base de données..."
+            $DRUSH updatedb --yes
+
+            # ── 6. Import config ───────────────────────────────────────────
+            if [ -d "$DEPLOY_PATH/config/sync" ] && \
+               [ "$(ls -A $DEPLOY_PATH/config/sync)" ]; then
+              echo "⚙️  Import de la configuration..."
+              $DRUSH config:import --yes
+            else
+              echo "   → Pas de config/sync à importer"
+            fi
+
+            # ── 7. Rebuild cache ───────────────────────────────────────────
+            echo "♻️  Rebuild du cache..."
+            $DRUSH cache:rebuild
+
+            # ── 8. Mode maintenance OFF ────────────────────────────────────
+            echo "✅ Désactivation du mode maintenance..."
+            $DRUSH state:set system.maintenance_mode 0 --input-format=integer
+            $DRUSH cache:rebuild
+
+            # ── 9. Reload Apache ───────────────────────────────────────────
+            echo "🌐 Rechargement Apache..."
+            sudo systemctl reload apache2
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  🎉 Déploiement terminé avec succès"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          ENDSSH
+
+      - name: Smoke test — Vérification HTTP
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 "${{ vars.DEPLOY_BASE_URL }}")
+          echo "→ HTTP Status : $HTTP_STATUS"
+          if [[ "$HTTP_STATUS" =~ ^(200|301|302)$ ]]; then
+            echo "✅ Site accessible"
+          else
+            echo "❌ Site inaccessible (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+
+      - name: Nettoyage clé SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  # ── JOB 6 : Notification ──────────────────────────────────────────────────
+  notify:
+    name: 📣 Notification
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+
+    steps:
+      - name: Slack — Succès
+        if: needs.deploy.result == 'success'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ *Déploiement Drupal réussi*\nBranche : `${{ github.ref_name }}`\nAuteur : `${{ github.actor }}`\n🔗 ${{ vars.DEPLOY_BASE_URL }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      - name: Slack — Échec
+        if: needs.deploy.result == 'failure'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "❌ *Échec du déploiement Drupal*\nBranche : `${{ github.ref_name }}`\nAuteur : `${{ github.actor }}`\n📋 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true

@@ -1,0 +1,9 @@
+access article manager:
+  title: 'Accéder au gestionnaire d''articles'
+  description: 'Permet de lister et consulter les articles.'
+  restrict access: false
+
+manage articles:
+  title: 'Créer, modifier et supprimer des articles'
+  description: 'Permet les opérations CRUD complètes sur les articles.'
+  restrict access: true

@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ * Hooks principaux du module Article Manager.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function article_manager_theme(): array {
+  return [
+    'article_manager_detail' => [
+      'variables' => [
+        'article'    => NULL,
+        'author'     => NULL,
+        'created'    => NULL,
+        'updated'    => NULL,
+        'back_url'   => NULL,
+        'edit_url'   => NULL,
+        'delete_url' => NULL,
+      ],
+      'template' => 'article-manager-detail',
+    ],
+  ];
+}

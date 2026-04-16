@@ -1,0 +1,38 @@
+# ── Drupal ────────────────────────────────────────────────────────────────
+web/core/
+web/modules/contrib/
+web/themes/contrib/
+web/profiles/contrib/
+web/libraries/
+web/sites/default/files/
+web/sites/default/settings.local.php
+
+# ── Composer ──────────────────────────────────────────────────────────────
+vendor/
+/drush/Commands/contrib/
+
+# ── Private / Sensible ────────────────────────────────────────────────────
+private/
+*.env
+.env.local
+
+# ── Lando ─────────────────────────────────────────────────────────────────
+.lando/
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.DS_Store
+*.swp
+Thumbs.db
+
+# ── Node ──────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log
+
+# ── Tests / Coverage ──────────────────────────────────────────────────────
+coverage/
+/tmp/
+
+# ── Config sync (commité intentionnellement) ──────────────────────────────
+# !config/sync/

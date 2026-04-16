@@ -1,0 +1,51 @@
+name: drupal-crud
+recipe: drupal10
+
+config:
+  webroot: web
+  php: "8.2"
+  database: mysql:8.0
+  drush: true
+  xdebug: false
+
+services:
+  appserver:
+    overrides:
+      environment:
+        DRUSH_OPTIONS_ROOT: /app/web
+        DRUSH_OPTIONS_URI: https://drupal-crud.lndo.site
+        PHP_MEMORY_LIMIT: 512M
+        COMPOSER_MEMORY_LIMIT: -1
+
+  database:
+    type: mysql:8.0
+    portforward: 3307
+    creds:
+      user: drupal
+      password: drupal
+      database: drupal
+
+  mailhog:
+    type: mailhog
+    hogfrom:
+      - appserver
+    portforward: 1025
+
+tooling:
+  drush:
+    service: appserver
+    cmd: drush
+  phpunit:
+    service: appserver
+    cmd: ./vendor/bin/phpunit
+  phpcs:
+    service: appserver
+    cmd: ./vendor/bin/phpcs
+  composer:
+    service: appserver
+
+proxy:
+  appserver:
+    - drupal-crud.lndo.site
+  mailhog:
+    - mail.drupal-crud.lndo.site:8025
