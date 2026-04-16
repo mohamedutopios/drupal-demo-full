@@ -232,17 +232,17 @@ jobs:
 
       - name: Composer dump-autoload optimisé
         run: composer dump-autoload --optimize --no-dev
-
+        
       - name: Créer l'artefact de déploiement
         run: |
           tar --exclude='.git' \
+              --exclude='./drupal-build.tar.gz' \
               --exclude='web/sites/default/files' \
               --exclude='web/sites/default/settings.local.php' \
               --exclude='node_modules' \
               --exclude='coverage' \
               --exclude='*.test' \
               -czf drupal-build.tar.gz .
-
       - name: Upload artefact de build
         uses: actions/upload-artifact@v4
         with:
