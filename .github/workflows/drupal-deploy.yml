@@ -325,10 +325,14 @@ jobs:
 
             # ── 3. Extraction de l'artefact ────────────────────────────────
             echo "📦 Extraction de l'artefact..."
-            tar -xzf /tmp/drupal-build.tar.gz -C "$DEPLOY_PATH" \
+            sudo tar -xzf /tmp/drupal-build.tar.gz -C "$DEPLOY_PATH" \
               --exclude='web/sites/default/settings.php' \
-              --exclude='web/sites/default/files'
+              --exclude='web/sites/default/files' \
+              --overwrite \
+              --no-same-owner \
+              --no-same-permissions
             rm -f /tmp/drupal-build.tar.gz
+            sudo chown -R www-data:www-data "$DEPLOY_PATH"
 
             # ── 4. Permissions ─────────────────────────────────────────────
             echo "🔑 Application des permissions..."
