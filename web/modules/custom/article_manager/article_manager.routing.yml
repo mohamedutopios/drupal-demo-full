@@ -19,7 +19,7 @@ article_manager.view:
   path: '/articles/{article_id}'
   defaults:
     _controller: '\Drupal\article_manager\Controller\ArticleController::view'
-    _title: 'Détail de l\'article'
+    _title: "Détail de l'article"
   requirements:
     _permission: 'access article manager'
     article_id: \d+
