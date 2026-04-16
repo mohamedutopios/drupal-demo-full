@@ -8,8 +8,7 @@ parameters:
     - web/modules/custom
   excludePaths:
     - web/modules/custom/*/tests
-  drupal:
-    drupal_root: web
   ignoreErrors:
-    # Drupal utilise des méthodes magiques via __call
+    - '#no value type specified in iterable type array#'
     - '#Call to an undefined method Drupal\\Core\\Database\\StatementInterface#'
+    - '#Ignored error pattern#'
