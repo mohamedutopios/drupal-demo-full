@@ -1,11 +1,10 @@
-uuid: ef208bcf-f4d9-4bce-b408-3de9d7852648
+uuid: 1441bece-4631-4e63-8eea-e5b9654b43df
 langcode: fr
 status: true
 dependencies:
   config:
     - filter.format.restricted_html
   module:
-    - article_manager
     - comment
     - contact
     - filter
@@ -18,7 +17,6 @@ label: 'Utilisateur anonyme'
 weight: 0
 is_admin: false
 permissions:
-  - 'access article manager'
   - 'access comments'
   - 'access content'
   - 'access site-wide contact form'

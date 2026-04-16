@@ -1,8 +1,8 @@
 _core:
   default_config_hash: ijfbzDTN4CbE7Sr-6ubWzy_t1vH4OtU1doNCLssVz-4
 langcode: fr
-uuid: c38d555b-9458-4916-86db-5d02fca14b6d
-name: 'Drupal CRUD'
+uuid: 6ee082ef-6600-46c3-9673-588a603072ea
+name: 'Drupal CRUD — Formation Utopios'
 mail: admin@example.com
 slogan: ''
 page:
