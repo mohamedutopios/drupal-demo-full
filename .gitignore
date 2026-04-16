@@ -36,3 +36,5 @@ coverage/
 
 # ── Config sync (commité intentionnellement) ──────────────────────────────
 # !config/sync/
+/.editorconfig
+/.gitattributes
