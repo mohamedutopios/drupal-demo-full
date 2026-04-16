@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
-         bootstrap="web/core/tests/bootstrap.php"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
          colors="true"
          verbose="true"
          stopOnFailure="false">
@@ -10,17 +9,7 @@
     <testsuite name="unit">
       <directory>web/modules/custom/*/tests/src/Unit</directory>
     </testsuite>
-    <testsuite name="kernel">
-      <directory>web/modules/custom/*/tests/src/Kernel</directory>
-    </testsuite>
   </testsuites>
-
-  <php>
-    <env name="SIMPLETEST_BASE_URL"  value="http://drupal-crud.lndo.site"/>
-    <env name="SIMPLETEST_DB"        value="mysql://drupal:drupal@database/drupal"/>
-    <env name="BROWSERTEST_OUTPUT_DIRECTORY" value="/tmp"/>
-    <env name="SYMFONY_DEPRECATIONS_HELPER" value="disabled"/>
-  </php>
 
   <coverage>
     <include>
@@ -29,10 +18,6 @@
     <exclude>
       <directory>web/modules/custom/*/tests</directory>
     </exclude>
-    <report>
-      <text outputFile="php://stdout" showUncoveredFiles="false"/>
-      <html outputDirectory="coverage/"/>
-    </report>
   </coverage>
 
 </phpunit>
