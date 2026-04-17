@@ -2,7 +2,7 @@ article_manager.list:
   path: '/articles'
   defaults:
     _controller: '\Drupal\article_manager\Controller\ArticleController::list'
-    _title: 'Gestion des Articles -v2'
+    _title: 'Gestion des Articles - Santelys'
   requirements:
     _permission: 'access article manager'
 
